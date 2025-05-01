@@ -1,16 +1,7 @@
-import { NextResponse } from "next/server"
-import { PrismaClient } from "@repo/db/client";
+import NextAuth from "next-auth"
+import { authOptions } from "../../../lib/auth"
 
-const client = new PrismaClient();
+//@ts-ignore
+const handler = NextAuth(authOptions)
 
-export const GET = async () => {
-    await client.user.create({
-        data: {
-            email: "asd",
-            name: "adsads"
-        }
-    })
-    return NextResponse.json({
-        message: "hi there"
-    })
-}
+export { handler as GET, handler as POST }
