@@ -42,4 +42,10 @@ jobs:
           sudo docker pull ashwin06/paytm:latest
           sudo docker stop web-app || true
           sudo docker rm web-app || true
-          sudo docker run -d --restart always --name web-app -p 3000:3000 -e DATABASE_URL=${{secrets.Database_url}} ashwin06/paytm:latest 
+          sudo docker run -d \
+          --restart always \
+          --name user-app \
+          -p 3000:3000 \
+          -e NEXTAUTH_URL=http://${{secrets.callback}}:3000 \
+          -e DATABASE_URL=${{secrets.Database_url}} \
+          ashwin06/paytm:latest
