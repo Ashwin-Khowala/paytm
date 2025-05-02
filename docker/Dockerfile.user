@@ -2,27 +2,19 @@ FROM node:20.12.0-alpine3.19
 
 WORKDIR /usr/src/app
 
-# Copy root config files
 COPY package.json package-lock.json turbo.json tsconfig.json ./
 
-# Copy only the specific app and relevant packages
-COPY apps/user-app ./apps/user-app
+COPY apps ./apps
 COPY packages ./packages
 
-# Set working directory to the app
-WORKDIR /usr/src/app/apps/user-app
+# Install dependencies
+RUN npm install
+# Can you add a script to the global package.json that does this?
+RUN cd packages/db && npx prisma generate && cd ../..
 
-# Install dependencies (recursive install from root)
-RUN npm install --legacy-peer-deps
+# Can you filter the build down to just one app?
+RUN npm run build
 
-# Generate db if needed
-RUN npm run db:generate || true
-
-# Build the app (from root or directly)
-RUN npm run build --filter=user-app
-
-# Make sure the app listens on 0.0.0.0
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start-user-app"]
