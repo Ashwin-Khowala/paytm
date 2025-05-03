@@ -49,4 +49,4 @@ jobs:
           -e NEXTAUTH_URL=http://${{secrets.callback}}:3000 \
           -e DATABASE_URL=${{secrets.Database_url}} \
           ashwin06/paytm:latest \
-          sh -c "npx prisma migrate deploy && npm run start-user-app
+          sh -c "npx prisma migrate deploy && npm run start-user-app"
