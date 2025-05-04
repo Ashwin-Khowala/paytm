@@ -27,14 +27,18 @@ model Merchant {
 }
 
 model OnRampTransaction {
-  id        Int          @id @default(autoincrement())
+  id        Int          @default(autoincrement())
   status    OnRampStatus
-  token     String       @unique
+  token     String 
   provider  String
   amount    Int
   startTime DateTime
   userId    Int
   user      User         @relation(fields: [userId], references: [id])
+  
+  @@id([id, startTime])
+  @@index([token])
+  // @@unique([token, startTime])
 }
 
 model Balance {

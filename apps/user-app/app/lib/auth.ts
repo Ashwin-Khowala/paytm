@@ -39,6 +39,20 @@ export const authOptions = {
                         password: hashedPassword
                     }
                 });
+
+                const userBalance = await db.balance.create({
+                    data: {
+                        userId: user.id,
+                        amount: 0,
+                        locked: 0
+                    }
+                });
+                if (!userBalance) {
+                    throw new Error("Error while creating balance")
+                }
+                if (!user) {
+                    throw new Error("Error while creating user")
+                }
             
                 return {
                     id: user.id.toString(),

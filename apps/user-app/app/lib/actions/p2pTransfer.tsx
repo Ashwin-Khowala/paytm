@@ -37,10 +37,15 @@ export async function p2pTransfer(to: string, amount: number) {
             FOR UPDATE
         `);
     
-        const fromBalance = await tx.balance.findUnique({
-            where: { userId: Number(from) },
+        const fromBalance = await tx.balance.findFirst({
+            where: { 
+                userId: Number(from) 
+            },
         });
-    
+        
+        console.log("HI");
+        console.log(fromBalance, toUser.id, amount);
+
         if (!fromBalance || fromBalance.amount < amount) {
             throw new Error('Insufficient funds');
         }

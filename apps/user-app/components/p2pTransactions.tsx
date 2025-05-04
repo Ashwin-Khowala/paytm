@@ -24,7 +24,7 @@ export const P2pTransfer = ({ transactions }: {
                             Paid INR
                         </div>
                         <div className={`m-1 text-sm  ${t.status === "Processing" ? "text-gray-700" : "text-red-500"} font-semibold`}>
-                            Credited
+                            Debited
                         </div>
                     </div>
                     <div className="text-slate-600 text-xs">

@@ -36,23 +36,91 @@ interface UserData extends User, userBalance{
     userBalance:userBalance
 }
 
+interface TransactionDataItem {
+    date: string;
+    amount: number;
+}
+
 export default function DashboardChart() {
     const { data: session, status } = useSession();
     const [user_data, setUser_Data] = useState<UserData | null>(null);
-    const [selectedTimeLine, setSelectedTimeLine] = useState("1W");
-    const [isSelectedButton, setSelectedButton] = useState(selectedTimeLine);
+    const [selectedTimeLine, setSelectedTimeLine] = useState("7 days");
+    const [timelineData, setTimelineData] = useState<number[]>([]);
+    const [timelineLabels, setTimelineLabels] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
         if (status === "authenticated") {
             fetch("/api/user/user-data")
                 .then((res) => res.json())
-                .then((data) => setUser_Data(data));
+                .then((data) => setUser_Data(data))
+                .catch(err => console.error("Error fetching user data:", err));
         }
     }, [status]);
+
+    useEffect(() => {
+        const fetchTransactionData = async () => {
+            if (status !== "authenticated") return;
+            
+            setIsLoading(true);
+            setError(null);
+            
+            try {
+                console.log("Fetching data for:", selectedTimeLine);
+                const response = await fetch(`/api/user/transaction-details?duration=${selectedTimeLine}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log("Transaction data:", data);
+                
+                if (!data || !Array.isArray(data)) {
+                    // Handle empty or invalid data
+                    setTimelineLabels(generateTimelineLabels(selectedTimeLine));
+                    setTimelineData(Array(generateTimelineLabels(selectedTimeLine).length).fill(0));
+                    return;
+                }
+                
+                // Extract labels and values from data
+                const labels = data.map((item: TransactionDataItem) => item.date);
+                const values = data.map((item: TransactionDataItem) => item.amount);
+                
+                // If we have data but not enough for all labels, fill in the gaps
+                const defaultLabels = generateTimelineLabels(selectedTimeLine);
+                if (labels.length < defaultLabels.length) {
+                    setTimelineLabels(defaultLabels);
+                    
+                    // Create an array matching the default labels length, filled with values where available
+                    const paddedValues = Array(defaultLabels.length).fill(0);
+                    values.forEach((val, index) => {
+                        paddedValues[index] = val;
+                    });
+                    setTimelineData(paddedValues);
+                } else {
+                    setTimelineLabels(labels);
+                    setTimelineData(values);
+                }
+            } catch (err) {
+                console.error("Error fetching transaction data:", err);
+                setError("Failed to load transaction data");
+                // Set default empty data
+                setTimelineLabels(generateTimelineLabels(selectedTimeLine));
+                setTimelineData(Array(generateTimelineLabels(selectedTimeLine).length).fill(0));
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        fetchTransactionData();
+    }, [selectedTimeLine, status]);
 
     if (status === "unauthenticated") {
         return <p className="text-center text-red-500">Not authenticated</p>;
     }
+    
     const user = user_data?.user || null;
     const userBalance = user_data?.userBalance || null;
 
@@ -64,19 +132,21 @@ export default function DashboardChart() {
         },
     };
     
-    const timelineLabels = generateTimelineLabels(selectedTimeLine);
-    
     const data = {
         labels: timelineLabels,
         datasets: [
             {
                 label: "Portfolio Value",
-                data: [100, 200, 300, 250, 400, 350, 500], 
+                data: timelineData, 
                 borderColor: '#6c47ff',
                 backgroundColor: "#FFFF",
                 tension: 0.4,
             },
         ],
+    };
+
+    const handleTimelineChange = (newTimeline: string) => {
+        setSelectedTimeLine(newTimeline);
     };
 
     return (
@@ -93,16 +163,27 @@ export default function DashboardChart() {
                     </div>
 
                     <div className="w-full h-72">
-                        <Line options={options} data={data} className="w-full"/>
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <p>Loading data...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="flex items-center justify-center h-full">
+                                <p className="text-red-500">{error}</p>
+                            </div>
+                        ) : (
+                            <Line options={options} data={data} className="w-full"/>
+                        )}
                     </div>
+                    
                     {/* timeline */}
                     <div className="w-full flex justify-center">
                         <div className="mt-3 flex gap-2 bg-gray-100 w-48 justify-center rounded-full h-8 items-center">
-                            <Button text="1W" onClick={() => setSelectedTimeLine("1W")} selectedTimeLine={selectedTimeLine} />
-                            <Button text="1M" onClick={() => setSelectedTimeLine("1M")} selectedTimeLine={selectedTimeLine} />
-                            <Button text="3M" onClick={() => setSelectedTimeLine("3M")} selectedTimeLine={selectedTimeLine} />
-                            <Button text="6M" onClick={() => setSelectedTimeLine("6M")} selectedTimeLine={selectedTimeLine} />
-                            <Button text="1Y" onClick={() => setSelectedTimeLine("1Y")} selectedTimeLine={selectedTimeLine} />
+                            <Button text="1W" value="7 days" onClick={() => handleTimelineChange("7 days")} selectedTimeLine={selectedTimeLine} />
+                            <Button text="1M" value="1 month" onClick={() => handleTimelineChange("1 month")} selectedTimeLine={selectedTimeLine} />
+                            <Button text="3M" value="3 months" onClick={() => handleTimelineChange("3 months")} selectedTimeLine={selectedTimeLine} />
+                            <Button text="6M" value="6 months" onClick={() => handleTimelineChange("6 months")} selectedTimeLine={selectedTimeLine} />
+                            <Button text="1Y" value="1 year" onClick={() => handleTimelineChange("1 year")} selectedTimeLine={selectedTimeLine} />
                         </div>
                     </div>
                 </div>
@@ -111,13 +192,16 @@ export default function DashboardChart() {
     );
 }
 
-function Button({ text, onClick, selectedTimeLine }:{
+function Button({ text, value, onClick, selectedTimeLine }:{
     text: string;
+    value: string;
     onClick: () => void;
     selectedTimeLine: string;
 }) {
+    const isSelected = selectedTimeLine === value;
+    
     return (
-        <div className={`${selectedTimeLine === text ? "bg-white shadow-md rounded-lg" : ""}`}>
+        <div className={`${isSelected ? "bg-white shadow-md rounded-lg" : ""}`}>
             <button onClick={onClick} className="m-1 text-xs text-black font-semibold">
                 {text}
             </button>
@@ -125,17 +209,17 @@ function Button({ text, onClick, selectedTimeLine }:{
     );
 }
 
-function generateTimelineLabels(range:any) {
+function generateTimelineLabels(range: string) {
     const today = new Date();
     const labels = [];
 
-    function addDays(date:Date, days:number) {
+    function addDays(date: Date, days: number) {
         const newDate = new Date(date);
         newDate.setDate(date.getDate() + days);
         return newDate;
     }
 
-    function formatDate(date:Date, format:string) {
+    function formatDate(date: Date, format: string) {
         return format === "day"
             ? date.toLocaleDateString("en-US", { weekday: "short" })     // e.g., Mon
             : format === "month"
@@ -143,27 +227,27 @@ function generateTimelineLabels(range:any) {
             : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }); // e.g., 01 Jan
     }
 
-    if (range === "1W") {
+    if (range === "7 days") {
         for (let i = 6; i >= 0; i--) {
             const date = addDays(today, -i);
             labels.push(formatDate(date, "day")); // Mon, Tue, ...
         }
-    } else if (range === "1M") {
+    } else if (range === "1 month") {
         for (let i = 30; i >= 0; i -= 3) {
             const date = addDays(today, -i);
             labels.push(formatDate(date, "short")); // 01 Apr, 04 Apr, ...
         }
-    } else if (range === "3M") {
+    } else if (range === "3 months") {
         for (let i = 90; i >= 0; i -= 7) {
             const date = addDays(today, -i);
             labels.push(formatDate(date, "short"));
         }
-    } else if (range === "6M") {
+    } else if (range === "6 months") {
         for (let i = 180; i >= 0; i -= 14) {
             const date = addDays(today, -i);
             labels.push(formatDate(date, "short"));
         }
-    } else if (range === "1Y") {
+    } else if (range === "1 year") {
         for (let i = 11; i >= 0; i--) {
             const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
             labels.push(formatDate(date, "month")); // Jan, Feb, ...
