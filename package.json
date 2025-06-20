@@ -3,10 +3,10 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "cd packages/db && ts-node initTimescale.ts && cd../.. && turbo dev",
+    "dev": "cd packages/db && bunx ts-node initTimescale.ts && cd ../.. && turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "db:generate": "cd packages/db && npx prisma generate && cd ../..",
+    "db:generate": "cd packages/db && bunx prisma generate && cd ../..",
     "start-user-app": "cd ./apps/user-app && npm run start"
   },
   "devDependencies": {
@@ -24,7 +24,7 @@
     "packages/*"
   ],
   "dependencies": {
-    "chart.js": "^4.4.9",
+    "chart.js": "^4.5.0",
     "react-chartjs-2": "^5.3.0"
   }
 }

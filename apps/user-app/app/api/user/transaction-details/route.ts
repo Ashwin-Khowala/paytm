@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     // Format the data in a way that's easier for the frontend to use
     console.log("Formatted Data:", transactionDetails||"No data found");
     const formattedData = formatTransactionData(transactionDetails);
+    console.log("Formatted Data:", formattedData);
     if(!formattedData) {
       return NextResponse.json({ error: "No data found" }, { status: 404 });
     }
@@ -59,7 +60,7 @@ async function getOnRampTransactionDetails(
     FROM "OnRampTransaction"
     WHERE "userId" = $1 AND "startTime" >= now() - interval '${duration}'
     GROUP BY period
-    ORDER BY period ASC;
+    ORDER BY period DESC;
   `, userId);
 
   return result;
